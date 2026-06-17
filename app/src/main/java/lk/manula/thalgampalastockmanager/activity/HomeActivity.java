@@ -163,11 +163,11 @@ public class HomeActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 // Using the official GitHub API to get the latest release
-                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/latest");
+                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/Thalgampala-Thunapaha-Stock-Manager/releases/latest");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
-                connection.setRequestProperty("User-Agent", "Thalgampala_Thunapaha_Stock_Manager");
+                connection.setRequestProperty("User-Agent", "Thalgampala-Thunapaha-Stock-Manager");
 
                 connection.setRequestProperty("Authorization", "Bearer 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"); // GitHub API requires User-Agent
 
