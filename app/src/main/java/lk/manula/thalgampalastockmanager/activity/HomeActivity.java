@@ -178,8 +178,8 @@ public class HomeActivity extends AppCompatActivity {
                     reader.close();
 
                     JSONObject json = new JSONObject(response.toString());
-                    String latestVersion = json.getString("tag_name");
-                    String downloadUrl = json.getString("html_url");
+                    String latestVersion = json.getString("Release v1.1 - Bug Fixes");
+                    String downloadUrl = json.getString("https://github.com/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/download/v1.1/Thalgampala.Thunapaha.Stock.Manager.1.1.apk");
 
                     String currentVersion = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
                     
