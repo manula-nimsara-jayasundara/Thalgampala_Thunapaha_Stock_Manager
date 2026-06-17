@@ -163,7 +163,7 @@ public class HomeActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 // TODO: Replace with your actual GitHub repository details
-                URL url = new URL("https://api.github.com/repos/Manula-P/Thalgampala-Stock-Manager/releases/latest");
+                URL url = new URL("https://github.com/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/download/v1.1/Thalgampala.Thunapaha.Stock.Manager.1.1.apk");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
