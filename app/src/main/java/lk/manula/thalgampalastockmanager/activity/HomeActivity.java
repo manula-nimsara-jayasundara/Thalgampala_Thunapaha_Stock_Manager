@@ -162,11 +162,12 @@ public class HomeActivity extends AppCompatActivity {
 
         executor.execute(() -> {
             try {
-                // TODO: Replace with your actual GitHub repository details
-                URL url = new URL("https://github.com/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/download/v1.1/Thalgampala.Thunapaha.Stock.Manager.1.1.apk");
+                // Using the official GitHub API to get the latest release
+                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/latest");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
-                connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
+                connection.setRequestProperty("User-Agent", "Thalgampala_Thunapaha_Stock_Manager");
+                connection.setRequestProperty("Authorization", "Bearer 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"); // GitHub API requires User-Agent
 
                 if (connection.getResponseCode() == 200) {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -178,23 +179,32 @@ public class HomeActivity extends AppCompatActivity {
                     reader.close();
 
                     JSONObject json = new JSONObject(response.toString());
-                    String latestVersion = json.getString("Release v1.1 - Bug Fixes");
-                    String downloadUrl = json.getString("https://github.com/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/download/v1.1/Thalgampala.Thunapaha.Stock.Manager.1.1.apk");
+                    String latestVersion = json.optString("tag_name", ""); // e.g. "v1.1"
+                    String downloadUrl = json.optString("html_url", ""); // URL to the release page
+
+                    if (latestVersion.isEmpty()) {
+                        handler.post(() -> Toast.makeText(HomeActivity.this, "No release information found", Toast.LENGTH_SHORT).show());
+                        return;
+                    }
 
                     String currentVersion = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
                     
-                    // Simple version comparison
-                    if (!latestVersion.replace("v", "").equals(currentVersion.replace("v", ""))) {
+                    // Simple version comparison: stripping 'v' and comparing strings
+                    String latest = latestVersion.toLowerCase().replace("v", "").trim();
+                    String current = currentVersion.toLowerCase().replace("v", "").trim();
+
+                    if (!latest.equals(current)) {
                         handler.post(() -> showUpdateDialog(latestVersion, downloadUrl));
                     } else {
                         handler.post(() -> Toast.makeText(HomeActivity.this, "App is up to date", Toast.LENGTH_SHORT).show());
                     }
                 } else {
-                    handler.post(() -> Toast.makeText(HomeActivity.this, "Failed to check for updates", Toast.LENGTH_SHORT).show());
+                    int responseCode = connection.getResponseCode();
+                    handler.post(() -> Toast.makeText(HomeActivity.this, "Failed to check updates (Code: " + responseCode + ")", Toast.LENGTH_SHORT).show());
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                handler.post(() -> Toast.makeText(HomeActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                handler.post(() -> Toast.makeText(HomeActivity.this, "Update check error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             } finally {
                 executor.shutdown();
             }
