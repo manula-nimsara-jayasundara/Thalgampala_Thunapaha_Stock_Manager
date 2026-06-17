@@ -6,4 +6,8 @@
         android:icon="@drawable/ic_save"
         android:title="Save PDF"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_check_updates"
+        android:title="@string/menu_check_updates"
+        app:showAsAction="never" />
 </menu>

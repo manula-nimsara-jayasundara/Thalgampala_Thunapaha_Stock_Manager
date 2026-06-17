@@ -2,6 +2,9 @@ package lk.manula.thalgampalastockmanager.activity;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -10,9 +13,13 @@ import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -27,13 +34,23 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.appbar.MaterialToolbar;
+
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import lk.manula.thalgampalastockmanager.R;
 
@@ -58,6 +75,9 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         tvGrandTotal = findViewById(R.id.tvGrandTotal);
         tvTotalItems = findViewById(R.id.tvTotalItems);
@@ -114,6 +134,82 @@ public class HomeActivity extends AppCompatActivity {
                     Toast.makeText(this, "Inventory cleared", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.home_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_check_updates) {
+            checkForUpdates();
+            return true;
+        } else if (id == R.id.action_save_pdf) {
+            findViewById(R.id.btnSavePdf).performClick();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void checkForUpdates() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Handler handler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            try {
+                // TODO: Replace with your actual GitHub repository details
+                URL url = new URL("https://api.github.com/repos/Manula-P/Thalgampala-Stock-Manager/releases/latest");
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
+
+                if (connection.getResponseCode() == 200) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    reader.close();
+
+                    JSONObject json = new JSONObject(response.toString());
+                    String latestVersion = json.getString("tag_name");
+                    String downloadUrl = json.getString("html_url");
+
+                    String currentVersion = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                    
+                    // Simple version comparison
+                    if (!latestVersion.replace("v", "").equals(currentVersion.replace("v", ""))) {
+                        handler.post(() -> showUpdateDialog(latestVersion, downloadUrl));
+                    } else {
+                        handler.post(() -> Toast.makeText(HomeActivity.this, "App is up to date", Toast.LENGTH_SHORT).show());
+                    }
+                } else {
+                    handler.post(() -> Toast.makeText(HomeActivity.this, "Failed to check for updates", Toast.LENGTH_SHORT).show());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                handler.post(() -> Toast.makeText(HomeActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            } finally {
+                executor.shutdown();
+            }
+        });
+    }
+
+    private void showUpdateDialog(String newVersion, String downloadUrl) {
+        new AlertDialog.Builder(this)
+                .setTitle("Update Available")
+                .setMessage("A new version (" + newVersion + ") is available. Do you want to update?")
+                .setPositiveButton("Update", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl));
+                    startActivity(intent);
+                })
+                .setNegativeButton("Later", null)
                 .show();
     }
 
