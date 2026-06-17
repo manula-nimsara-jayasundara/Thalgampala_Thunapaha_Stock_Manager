@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="2dp">
+
+        <TextView
+            android:id="@+id/tvId"
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="1"
+            android:textSize="12sp" />
+
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#EEEEEE" />
+
+        <EditText
+            android:id="@+id/etProductName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="3"
+            android:background="@null"
+            android:hint="Product Name"
+            android:padding="4dp"
+            android:textSize="12sp" />
+
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#EEEEEE" />
+
+        <EditText
+            android:id="@+id/etQty"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:gravity="center"
+            android:hint="0"
+            android:inputType="number"
+            android:padding="4dp"
+            android:textSize="12sp" />
+
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#EEEEEE" />
+
+        <EditText
+            android:id="@+id/etUnitPrice"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:gravity="center"
+            android:hint="0.00"
+            android:inputType="numberDecimal"
+            android:padding="4dp"
+            android:textSize="12sp" />
+
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#EEEEEE" />
+
+        <TextView
+            android:id="@+id/tvTotalPrice"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="0.00"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnRemoveItem"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Remove Item"
+            android:padding="6dp"
+            android:scaleType="fitCenter"
+            app:srcCompat="@drawable/ic_delete"
+            app:tint="?attr/colorError" />
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#EEEEEE" />
+
+</LinearLayout>

@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Thalgampala Stock Manager</string>
+    <string name="title_home">Home</string>
+    <string name="btn_processes">Processes</string>
+    <string name="col_id">ID</string>
+    <string name="col_product_name">Product Name</string>
+    <string name="col_qty">Qty</string>
+    <string name="col_unit_price">Unit Price</string>
+    <string name="col_total_price">Total</string>
+    <string name="label_grand_total">Grand Total:</string>
+    <string name="tagline_splash">Stock Management Made Easy</string>
+</resources>
