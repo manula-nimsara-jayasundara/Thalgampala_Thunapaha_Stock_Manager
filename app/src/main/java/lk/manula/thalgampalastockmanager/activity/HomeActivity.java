@@ -124,9 +124,9 @@ public class HomeActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btnSavePdf).setOnClickListener(v -> {
-            boolean hasValidData = stockList.stream().anyMatch(item -> 
+            boolean hasValidData = stockList.stream().anyMatch(item ->
                     !item.name.isEmpty() || item.qty > 0 || item.unitPrice > 0);
-            
+
             if (!hasValidData) {
                 Toast.makeText(this, "Cannot save an empty report. Please add at least one item with details.", Toast.LENGTH_LONG).show();
                 return;
@@ -205,7 +205,7 @@ public class HomeActivity extends AppCompatActivity {
 
                     JSONObject json = new JSONObject(response);
                     String latestVersion = json.optString("tag_name", ""); // e.g. "v1.1"
-                    
+
                     String apkDownloadUrl = findApkUrl(json.optJSONArray("assets"));
 
                     if (latestVersion.isEmpty() || apkDownloadUrl.isEmpty()) {
@@ -215,7 +215,7 @@ public class HomeActivity extends AppCompatActivity {
 
                     PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
                     String currentVersion = pInfo.versionName != null ? pInfo.versionName : "0.0";
-                    
+
                     // Simple version comparison: stripping 'v' and comparing strings
                     String latest = latestVersion.toLowerCase().replace("v", "").trim();
                     String current = currentVersion.toLowerCase().replace("v", "").trim();
@@ -253,7 +253,7 @@ public class HomeActivity extends AppCompatActivity {
         request.setDescription("Downloading latest version...");
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
         request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "StockManager_Update_" + version + ".apk");
-        
+
         DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
         if (manager != null) {
             downloadId = manager.enqueue(request);
@@ -277,7 +277,7 @@ public class HomeActivity extends AppCompatActivity {
                         Uri apkUri = Uri.parse(uriString);
                         Intent install = new Intent(Intent.ACTION_VIEW);
                         install.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        
+
                         if ("content".equals(apkUri.getScheme())) {
                             install.setDataAndType(apkUri, "application/vnd.android.package-archive");
                         } else {
@@ -311,15 +311,15 @@ public class HomeActivity extends AppCompatActivity {
         final EditText etBranch = new EditText(this);
         etBranch.setHint("Enter Branch Name (e.g. Colombo)");
         int padding = (int) (16 * getResources().getDisplayMetrics().density);
-        
+
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Branch Name")
                 .setMessage("Enter the branch name for this report:")
                 .setView(etBranch)
                 .setPositiveButton("Save", (d, which) -> {
                     currentBranchName = etBranch.getText().toString().trim();
-                    String fileName = "Stock_Report_" + 
-                            (currentBranchName.isEmpty() ? "" : currentBranchName.replaceAll("[^a-zA-Z0-9.-]", "_") + "_") + 
+                    String fileName = "Stock_Report_" +
+                            (currentBranchName.isEmpty() ? "" : currentBranchName.replaceAll("[^a-zA-Z0-9.-]", "_") + "_") +
                             System.currentTimeMillis() + ".pdf";
                     createPdfLauncher.launch(fileName);
                 })
@@ -401,6 +401,7 @@ public class HomeActivity extends AppCompatActivity {
         paint.setTextSize(12);
         paint.setFakeBoldText(false);
         String currentDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
         canvas.drawText("Generated on: " + currentDateTime, x, y, paint);
         y += 30;
 
@@ -417,9 +418,10 @@ public class HomeActivity extends AppCompatActivity {
 
         // Table Content
         paint.setFakeBoldText(false);
+        int pageNumber = 1;
         for (StockItem item : stockList) {
             if (item.name.isEmpty() && item.qty == 0 && item.unitPrice == 0) continue;
-            
+
             canvas.drawText(String.valueOf(item.id), x, y, paint);
             canvas.drawText(item.name, x + 40, y, paint);
             canvas.drawText(String.valueOf(item.qty), x + 300, y, paint);
@@ -427,11 +429,13 @@ public class HomeActivity extends AppCompatActivity {
             canvas.drawText(String.format(Locale.US, "%.2f", item.totalPrice), x + 480, y, paint);
             y += 20;
 
-            if (y > 800) { // Very basic pagination support (not full)
+            if (y > 780) { // Leave space for footer
+                drawFooter(canvas, paint, pageNumber++);
                 document.finishPage(page);
                 page = document.startPage(pageInfo);
                 canvas = page.getCanvas();
                 y = 60;
+                paint.setFakeBoldText(false); // Reset paint for content
             }
         }
 
@@ -440,6 +444,47 @@ public class HomeActivity extends AppCompatActivity {
         y += 30;
         paint.setFakeBoldText(true);
         canvas.drawText("Grand Total: " + tvGrandTotal.getText().toString(), x + 350, y, paint);
+
+        // Add Note Paragraph
+        y += 40;
+        paint.setTextSize(10);
+        paint.setFakeBoldText(false);
+        paint.setTextAlign(Paint.Align.CENTER);
+
+
+        y += 20;
+        String bName = (branchName != null && !branchName.isEmpty()) ? branchName : "අදාළ";
+        String line1 = today + " දිනට ලබාගත් තොග ගණනයට අනුව " + bName + " ශාඛාවේ පවත්නා රු. " + tvGrandTotal.getText().toString() + " වටිනා තොගය";
+        String line2 = " ශාඛා කළමනාකරු වශයෙන් සත්‍ය හා නිවැරදි බවට මා සහතික වෙමි.";
+
+        String line3 = "ශාඛා කළමනාකරුගේ නම.................................";
+        String line4 = "තොග සත්‍යාපන නිලදාරි.................................";
+        String line5 = "ජා.හැ.අං.................................";
+        String line6 = "අත්සන.................................";
+
+        canvas.drawText(line1, 595 / 2f, y, paint);
+        y += 15;
+        canvas.drawText(line2, 595 / 2f, y, paint);
+
+        y += 40;
+        paint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText(line3, 60, y, paint);
+        paint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText(line4, 535, y, paint);
+
+        y += 30;
+        paint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText(line5, 60, y, paint);
+        paint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText(line5, 535, y, paint);
+
+        y += 30;
+        paint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText(line6, 60, y, paint);
+        paint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText(line6, 535, y, paint);
+
+        drawFooter(canvas, paint, pageNumber);
 
         document.finishPage(page);
 
@@ -455,6 +500,26 @@ public class HomeActivity extends AppCompatActivity {
         } finally {
             document.close();
         }
+    }
+
+    private void drawFooter(Canvas canvas, Paint paint, int pageNumber) {
+        paint.setTextSize(10);
+        paint.setFakeBoldText(false);
+        paint.setTextAlign(Paint.Align.LEFT);
+        float footerY = 820; // Near the bottom of the A4 page (842 height)
+
+        // Draw a separator line
+        canvas.drawLine(40, footerY - 15, 555, footerY - 15, paint);
+
+        // App Name on left
+        canvas.drawText("Thalgampala Stock Manager", 40, footerY, paint);
+
+        // Page number on right
+        paint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText("Page " + pageNumber, 555, footerY, paint);
+
+        // Reset paint align for future drawing
+        paint.setTextAlign(Paint.Align.LEFT);
     }
 
     static class StockItem {
@@ -545,38 +610,61 @@ public class HomeActivity extends AppCompatActivity {
                 });
 
                 nameWatcher = new TextWatcher() {
-                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                    @Override public void afterTextChanged(Editable s) {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
                         item.name = s.toString();
                     }
                 };
 
                 qtyWatcher = new TextWatcher() {
-                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                    @Override public void afterTextChanged(Editable s) {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
                         try {
                             String qStr = s.toString();
                             item.qty = qStr.isEmpty() ? 0 : Integer.parseInt(qStr);
                             item.totalPrice = item.qty * item.unitPrice;
                             tvTotalPrice.setText(String.format(Locale.US, "%.2f", item.totalPrice));
                             onDataChanged.run();
-                        } catch (NumberFormatException ignored) {}
+                        } catch (NumberFormatException ignored) {
+                        }
                     }
                 };
 
                 priceWatcher = new TextWatcher() {
-                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                    @Override public void afterTextChanged(Editable s) {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
                         try {
                             String pStr = s.toString();
                             item.unitPrice = pStr.isEmpty() ? 0.0 : Double.parseDouble(pStr);
                             item.totalPrice = item.qty * item.unitPrice;
                             tvTotalPrice.setText(String.format(Locale.US, "%.2f", item.totalPrice));
                             onDataChanged.run();
-                        } catch (NumberFormatException ignored) {}
+                        } catch (NumberFormatException ignored) {
+                        }
                     }
                 };
 
