@@ -166,7 +166,7 @@ public class HomeActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 // Using the official GitHub API to get the latest release
-                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/latest");
+                URL url = new URL("https://raw.githubusercontent.com/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/refs/heads/master/update.json");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(15000);
