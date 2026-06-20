@@ -3,16 +3,13 @@ package lk.manula.thalgampalastockmanager.activity;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
@@ -61,6 +58,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import lk.manula.thalgampalastockmanager.R;
 
@@ -126,15 +124,10 @@ public class HomeActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btnSavePdf).setOnClickListener(v -> {
-            boolean containsData = false;
-            for (StockItem item : stockList) {
-                if (!item.name.isEmpty() || item.qty > 0 || item.unitPrice > 0) {
-                    containsData = true;
-                    break;
-                }
-            }
+            boolean hasValidData = stockList.stream().anyMatch(item -> 
+                    !item.name.isEmpty() || item.qty > 0 || item.unitPrice > 0);
             
-            if (!containsData) {
+            if (!hasValidData) {
                 Toast.makeText(this, "Cannot save an empty report. Please add at least one item with details.", Toast.LENGTH_LONG).show();
                 return;
             }
@@ -146,11 +139,7 @@ public class HomeActivity extends AppCompatActivity {
         calculateSummary();
 
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.registerReceiver(this, onDownloadComplete, filter, ContextCompat.RECEIVER_EXPORTED);
-        } else {
-            registerReceiver(onDownloadComplete, filter);
-        }
+        ContextCompat.registerReceiver(this, onDownloadComplete, filter, ContextCompat.RECEIVER_EXPORTED);
     }
 
     @Override
@@ -211,43 +200,28 @@ public class HomeActivity extends AppCompatActivity {
                 int responseCode = connection.getResponseCode();
                 if (responseCode == 200) {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
+                    String response = reader.lines().collect(Collectors.joining());
                     reader.close();
 
-                    JSONObject json = new JSONObject(response.toString());
+                    JSONObject json = new JSONObject(response);
                     String latestVersion = json.optString("tag_name", ""); // e.g. "v1.1"
-                    String apkDownloadUrl = "";
-
-                    JSONArray assets = json.optJSONArray("assets");
-                    if (assets != null) {
-                        for (int i = 0; i < assets.length(); i++) {
-                            JSONObject asset = assets.getJSONObject(i);
-                            String name = asset.optString("name", "");
-                            if (name.toLowerCase().endsWith(".apk")) {
-                                apkDownloadUrl = asset.optString("browser_download_url", "");
-                                break;
-                            }
-                        }
-                    }
+                    
+                    String apkDownloadUrl = findApkUrl(json.optJSONArray("assets"));
 
                     if (latestVersion.isEmpty() || apkDownloadUrl.isEmpty()) {
                         handler.post(() -> Toast.makeText(HomeActivity.this, "No valid update file found", Toast.LENGTH_SHORT).show());
                         return;
                     }
 
-                    String currentVersion = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                    PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+                    String currentVersion = pInfo.versionName != null ? pInfo.versionName : "0.0";
                     
                     // Simple version comparison: stripping 'v' and comparing strings
                     String latest = latestVersion.toLowerCase().replace("v", "").trim();
                     String current = currentVersion.toLowerCase().replace("v", "").trim();
 
                     if (!latest.equals(current)) {
-                        String finalApkUrl = apkDownloadUrl;
-                        handler.post(() -> showUpdateDialog(latestVersion, finalApkUrl));
+                        handler.post(() -> showUpdateDialog(latestVersion, apkDownloadUrl));
                     } else {
                         handler.post(() -> Toast.makeText(HomeActivity.this, "App is up to date", Toast.LENGTH_SHORT).show());
                     }
@@ -257,7 +231,6 @@ public class HomeActivity extends AppCompatActivity {
                     handler.post(() -> Toast.makeText(HomeActivity.this, "Update check failed (HTTP " + responseCode + ")", Toast.LENGTH_SHORT).show());
                 }
             } catch (Exception e) {
-                e.printStackTrace();
                 handler.post(() -> Toast.makeText(HomeActivity.this, "Update check error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             } finally {
                 executor.shutdown();
@@ -269,9 +242,7 @@ public class HomeActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Update Available")
                 .setMessage("A new version (" + newVersion + ") is available. Do you want to download and install it?")
-                .setPositiveButton("Update Now", (dialog, which) -> {
-                    startDownload(downloadUrl, newVersion);
-                })
+                .setPositiveButton("Update Now", (dialog, which) -> startDownload(downloadUrl, newVersion))
                 .setNegativeButton("Later", null)
                 .show();
     }
@@ -312,14 +283,15 @@ public class HomeActivity extends AppCompatActivity {
                         } else {
                             // Convert file:// to content:// using FileProvider
                             try {
-                                File file = new File(new URL(uriString).getPath());
-                                Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
-                                install.setDataAndType(contentUri, "application/vnd.android.package-archive");
+                                String path = apkUri.getPath();
+                                if (path != null) {
+                                    File file = new File(path);
+                                    Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+                                    install.setDataAndType(contentUri, "application/vnd.android.package-archive");
+                                }
                             } catch (Exception e) {
-                                // Fallback for simple paths
-                                File file = new File(apkUri.getPath());
-                                Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
-                                install.setDataAndType(contentUri, "application/vnd.android.package-archive");
+                                // Fallback
+                                Toast.makeText(this, "Installation path error", Toast.LENGTH_SHORT).show();
                             }
                         }
 
@@ -346,11 +318,9 @@ public class HomeActivity extends AppCompatActivity {
                 .setView(etBranch)
                 .setPositiveButton("Save", (d, which) -> {
                     currentBranchName = etBranch.getText().toString().trim();
-                    String fileName = "Stock_Report_";
-                    if (!currentBranchName.isEmpty()) {
-                        fileName += currentBranchName.replaceAll("[^a-zA-Z0-9.-]", "_") + "_";
-                    }
-                    fileName += System.currentTimeMillis() + ".pdf";
+                    String fileName = "Stock_Report_" + 
+                            (currentBranchName.isEmpty() ? "" : currentBranchName.replaceAll("[^a-zA-Z0-9.-]", "_") + "_") + 
+                            System.currentTimeMillis() + ".pdf";
                     createPdfLauncher.launch(fileName);
                 })
                 .setNegativeButton("Cancel", null)
@@ -359,6 +329,21 @@ public class HomeActivity extends AppCompatActivity {
         // Add padding to the EditText inside the dialog
         dialog.setView(etBranch, padding, padding, padding, 0);
         dialog.show();
+    }
+
+    private String findApkUrl(JSONArray assets) {
+        if (assets != null) {
+            for (int i = 0; i < assets.length(); i++) {
+                JSONObject asset = assets.optJSONObject(i);
+                if (asset != null) {
+                    String name = asset.optString("name", "");
+                    if (name.toLowerCase().endsWith(".apk")) {
+                        return asset.optString("browser_download_url", "");
+                    }
+                }
+            }
+        }
+        return "";
     }
 
     private void calculateSummary() {
@@ -466,7 +451,6 @@ public class HomeActivity extends AppCompatActivity {
                 Toast.makeText(this, "PDF Saved Successfully", Toast.LENGTH_SHORT).show();
             }
         } catch (IOException e) {
-            e.printStackTrace();
             Toast.makeText(this, "Failed to save PDF", Toast.LENGTH_SHORT).show();
         } finally {
             document.close();
@@ -549,17 +533,15 @@ public class HomeActivity extends AppCompatActivity {
                 btnRemove.setOnClickListener(v -> {
                     if (items.size() > 1) {
                         items.remove(position);
-                        onDataChanged.run();
-                        adapter.notifyDataSetChanged(); // Refresh IDs after removal
                     } else {
                         // If it's the last item, just clear it instead of removing
                         item.name = "";
                         item.qty = 0;
                         item.unitPrice = 0.0;
                         item.totalPrice = 0.0;
-                        onDataChanged.run();
-                        adapter.notifyDataSetChanged(); // Refresh visual state
                     }
+                    onDataChanged.run();
+                    adapter.notifyDataSetChanged();
                 });
 
                 nameWatcher = new TextWatcher() {
