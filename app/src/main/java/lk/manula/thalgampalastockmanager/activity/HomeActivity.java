@@ -78,6 +78,9 @@ public class HomeActivity extends AppCompatActivity {
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        }
 
         tvGrandTotal = findViewById(R.id.tvGrandTotal);
         tvTotalItems = findViewById(R.id.tvTotalItems);
@@ -163,15 +166,16 @@ public class HomeActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 // Using the official GitHub API to get the latest release
-                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/Thalgampala-Thunapaha-Stock-Manager/releases/latest");
+                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/latest");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(15000);
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
-                connection.setRequestProperty("User-Agent", "Thalgampala-Thunapaha-Stock-Manager");
+                connection.setRequestProperty("User-Agent", "Thalgampala-Stock-Manager-App");
 
-                connection.setRequestProperty("Authorization", "Bearer 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"); // GitHub API requires User-Agent
-
-                if (connection.getResponseCode() == 200) {
+                int responseCode = connection.getResponseCode();
+                if (responseCode == 200) {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                     StringBuilder response = new StringBuilder();
                     String line;
@@ -200,9 +204,10 @@ public class HomeActivity extends AppCompatActivity {
                     } else {
                         handler.post(() -> Toast.makeText(HomeActivity.this, "App is up to date", Toast.LENGTH_SHORT).show());
                     }
+                } else if (responseCode == 404) {
+                    handler.post(() -> Toast.makeText(HomeActivity.this, "No releases found on GitHub.", Toast.LENGTH_SHORT).show());
                 } else {
-                    int responseCode = connection.getResponseCode();
-                    handler.post(() -> Toast.makeText(HomeActivity.this, "Failed to check updates (Code: " + responseCode + ")", Toast.LENGTH_SHORT).show());
+                    handler.post(() -> Toast.makeText(HomeActivity.this, "Update check failed (HTTP " + responseCode + ")", Toast.LENGTH_SHORT).show());
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -292,7 +297,7 @@ public class HomeActivity extends AppCompatActivity {
         paint.setTextSize(24);
         paint.setFakeBoldText(true);
         paint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("Thalgampala Thunapaha Stock Inventory Report", 595 / 2f, y, paint);
+        canvas.drawText("Stock Sheet", 595 / 2f, y, paint);
         y += 30;
 
         paint.setTextAlign(Paint.Align.LEFT); // Reset to left align for other details
