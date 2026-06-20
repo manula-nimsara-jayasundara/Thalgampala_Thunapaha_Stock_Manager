@@ -38,6 +38,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -125,15 +126,15 @@ public class HomeActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btnSavePdf).setOnClickListener(v -> {
-            boolean hasData = false;
+            boolean containsData = false;
             for (StockItem item : stockList) {
                 if (!item.name.isEmpty() || item.qty > 0 || item.unitPrice > 0) {
-                    hasData = true;
+                    containsData = true;
                     break;
                 }
             }
             
-            if (!hasData) {
+            if (!containsData) {
                 Toast.makeText(this, "Cannot save an empty report. Please add at least one item with details.", Toast.LENGTH_LONG).show();
                 return;
             }
@@ -144,10 +145,11 @@ public class HomeActivity extends AppCompatActivity {
 
         calculateSummary();
 
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED);
+            ContextCompat.registerReceiver(this, onDownloadComplete, filter, ContextCompat.RECEIVER_EXPORTED);
         } else {
-            registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+            registerReceiver(onDownloadComplete, filter);
         }
     }
 
