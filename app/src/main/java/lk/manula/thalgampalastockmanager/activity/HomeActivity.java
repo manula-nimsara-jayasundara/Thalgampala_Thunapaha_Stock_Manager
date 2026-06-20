@@ -1,10 +1,14 @@
 package lk.manula.thalgampalastockmanager.activity;
 
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -12,7 +16,9 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
@@ -31,14 +37,17 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -61,6 +70,17 @@ public class HomeActivity extends AppCompatActivity {
     private TextView tvGrandTotal, tvTotalItems, tvAvgPrice;
     private final List<StockItem> stockList = new ArrayList<>();
     private String currentBranchName = "";
+    private long downloadId = -1;
+
+    private final BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+            if (downloadId == id) {
+                installApk();
+            }
+        }
+    };
 
     private final ActivityResultLauncher<String> createPdfLauncher = registerForActivityResult(
             new ActivityResultContracts.CreateDocument("application/pdf"),
@@ -123,6 +143,18 @@ public class HomeActivity extends AppCompatActivity {
         findViewById(R.id.btnClearAll).setOnClickListener(v -> showClearConfirmation());
 
         calculateSummary();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(onDownloadComplete);
     }
 
     private void showClearConfirmation() {
@@ -166,7 +198,7 @@ public class HomeActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 // Using the official GitHub API to get the latest release
-                URL url = new URL("https://raw.githubusercontent.com/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/refs/heads/master/update.json");
+                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/Thalgampala_Thunapaha_Stock_Manager/releases/latest");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(15000);
@@ -186,10 +218,22 @@ public class HomeActivity extends AppCompatActivity {
 
                     JSONObject json = new JSONObject(response.toString());
                     String latestVersion = json.optString("tag_name", ""); // e.g. "v1.1"
-                    String downloadUrl = json.optString("html_url", ""); // URL to the release page
+                    String apkDownloadUrl = "";
 
-                    if (latestVersion.isEmpty()) {
-                        handler.post(() -> Toast.makeText(HomeActivity.this, "No release information found", Toast.LENGTH_SHORT).show());
+                    JSONArray assets = json.optJSONArray("assets");
+                    if (assets != null) {
+                        for (int i = 0; i < assets.length(); i++) {
+                            JSONObject asset = assets.getJSONObject(i);
+                            String name = asset.optString("name", "");
+                            if (name.toLowerCase().endsWith(".apk")) {
+                                apkDownloadUrl = asset.optString("browser_download_url", "");
+                                break;
+                            }
+                        }
+                    }
+
+                    if (latestVersion.isEmpty() || apkDownloadUrl.isEmpty()) {
+                        handler.post(() -> Toast.makeText(HomeActivity.this, "No valid update file found", Toast.LENGTH_SHORT).show());
                         return;
                     }
 
@@ -200,7 +244,8 @@ public class HomeActivity extends AppCompatActivity {
                     String current = currentVersion.toLowerCase().replace("v", "").trim();
 
                     if (!latest.equals(current)) {
-                        handler.post(() -> showUpdateDialog(latestVersion, downloadUrl));
+                        String finalApkUrl = apkDownloadUrl;
+                        handler.post(() -> showUpdateDialog(latestVersion, finalApkUrl));
                     } else {
                         handler.post(() -> Toast.makeText(HomeActivity.this, "App is up to date", Toast.LENGTH_SHORT).show());
                     }
@@ -221,13 +266,71 @@ public class HomeActivity extends AppCompatActivity {
     private void showUpdateDialog(String newVersion, String downloadUrl) {
         new AlertDialog.Builder(this)
                 .setTitle("Update Available")
-                .setMessage("A new version (" + newVersion + ") is available. Do you want to update?")
-                .setPositiveButton("Update", (dialog, which) -> {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl));
-                    startActivity(intent);
+                .setMessage("A new version (" + newVersion + ") is available. Do you want to download and install it?")
+                .setPositiveButton("Update Now", (dialog, which) -> {
+                    startDownload(downloadUrl, newVersion);
                 })
                 .setNegativeButton("Later", null)
                 .show();
+    }
+
+    private void startDownload(String url, String version) {
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+        request.setTitle("App Update " + version);
+        request.setDescription("Downloading latest version...");
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "StockManager_Update_" + version + ".apk");
+        
+        DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        if (manager != null) {
+            downloadId = manager.enqueue(request);
+            Toast.makeText(this, "Download started...", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void installApk() {
+        DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        DownloadManager.Query query = new DownloadManager.Query();
+        query.setFilterById(downloadId);
+        Cursor cursor = manager.query(query);
+
+        if (cursor.moveToFirst()) {
+            int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+            if (statusIndex != -1 && cursor.getInt(statusIndex) == DownloadManager.STATUS_SUCCESSFUL) {
+                int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                if (uriIndex != -1) {
+                    String uriString = cursor.getString(uriIndex);
+                    if (uriString != null) {
+                        Uri apkUri = Uri.parse(uriString);
+                        Intent install = new Intent(Intent.ACTION_VIEW);
+                        install.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        
+                        if ("content".equals(apkUri.getScheme())) {
+                            install.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                        } else {
+                            // Convert file:// to content:// using FileProvider
+                            try {
+                                File file = new File(new URL(uriString).getPath());
+                                Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+                                install.setDataAndType(contentUri, "application/vnd.android.package-archive");
+                            } catch (Exception e) {
+                                // Fallback for simple paths
+                                File file = new File(apkUri.getPath());
+                                Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+                                install.setDataAndType(contentUri, "application/vnd.android.package-archive");
+                            }
+                        }
+
+                        try {
+                            startActivity(install);
+                        } catch (Exception e) {
+                            Toast.makeText(this, "Error starting installation: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }
+            }
+        }
+        cursor.close();
     }
 
     private void showBranchNameDialog() {
