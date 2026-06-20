@@ -163,7 +163,7 @@ public class HomeActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 // Using the official GitHub API to get the latest release
-                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/Thalgampala-Thunapaha-Stock-Manager/releases/latest");
+                URL url = new URL("https://api.github.com/repos/manula-nimsara-jayasundara/thalgampalastockmanager/releases/latest");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
