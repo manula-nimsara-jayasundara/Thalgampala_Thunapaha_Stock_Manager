@@ -396,7 +396,7 @@ public class HomeActivity extends AppCompatActivity {
         // Company Name
         paint.setTextSize(20);
         paint.setFakeBoldText(true);
-        canvas.drawText("THALAGAMPALA THUNAPAHA (PVT) LTD", leftX, currentY + 25, paint);
+        canvas.drawText("THALGAMPALA THUNAPAHA (PVT) LTD", leftX, currentY + 25, paint);
 
         // Other details
         paint.setTextSize(11);
