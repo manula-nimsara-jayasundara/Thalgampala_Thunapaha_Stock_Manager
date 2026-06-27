@@ -20,7 +20,7 @@
             android:text="1"
             android:textSize="12sp" />
 
-        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#EEEEEE" />
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="?attr/colorOutlineVariant" android:alpha="0.3" />
 
         <EditText
             android:id="@+id/etProductName"
@@ -32,7 +32,7 @@
             android:padding="4dp"
             android:textSize="12sp" />
 
-        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#EEEEEE" />
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="?attr/colorOutlineVariant" android:alpha="0.3" />
 
         <EditText
             android:id="@+id/etQty"
@@ -45,7 +45,7 @@
             android:padding="4dp"
             android:textSize="12sp" />
 
-        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#EEEEEE" />
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="?attr/colorOutlineVariant" android:alpha="0.3" />
 
         <EditText
             android:id="@+id/etUnitPrice"
@@ -58,7 +58,7 @@
             android:padding="4dp"
             android:textSize="12sp" />
 
-        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#EEEEEE" />
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="?attr/colorOutlineVariant" android:alpha="0.3" />
 
         <TextView
             android:id="@+id/tvTotalPrice"
@@ -85,6 +85,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#EEEEEE" />
+        android:background="?attr/colorOutlineVariant"
+        android:alpha="0.3" />
 
 </LinearLayout>

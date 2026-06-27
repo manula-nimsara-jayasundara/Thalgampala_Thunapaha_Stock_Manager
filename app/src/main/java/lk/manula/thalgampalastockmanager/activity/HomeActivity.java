@@ -370,48 +370,85 @@ public class HomeActivity extends AppCompatActivity {
         Canvas canvas = page.getCanvas();
         Paint paint = new Paint();
 
-        int x = 40;
-        int y = 40;
+        int leftX = 40;
+        int rightX = 555;
+        int currentY = 45;
 
-        // Logo
+        // Logo on the right
         Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.logo_main);
         if (bitmap != null) {
-            int logoWidth = 140;
-            int logoHeight = 80;
+            int logoWidth = 135;
+            int logoHeight = 75;
             Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, logoWidth, logoHeight, false);
-            canvas.drawBitmap(scaledBitmap, (595 - logoWidth) / 2f, y, paint);
-            y += logoHeight + 20;
+            canvas.drawBitmap(scaledBitmap, rightX - logoWidth, currentY, paint);
+
+            // Tagline below logo in Sinhala
+            paint.setTextSize(12);
+            paint.setFakeBoldText(true);
+            paint.setTextAlign(Paint.Align.CENTER);
+//            canvas.drawText("අපේ රටේ හොඳම තුනපහ", rightX - (logoWidth / 2f), currentY + logoHeight + 20, paint);
         }
 
-        // Header
-        paint.setTextSize(24);
+        // Company Details on the left
+        paint.setTextAlign(Paint.Align.LEFT);
+        paint.setColor(android.graphics.Color.BLACK);
+
+        // Company Name
+        paint.setTextSize(20);
+        paint.setFakeBoldText(true);
+        canvas.drawText("THALAGAMPALA THUNAPAHA (PVT) LTD", leftX, currentY + 25, paint);
+
+        // Other details
+        paint.setTextSize(11);
+        paint.setFakeBoldText(true);
+        canvas.drawText("NO.144/2, SUMANASARA MAWATHA,", leftX, currentY + 42, paint);
+        canvas.drawText("THALGAMPALA, GALLE", leftX, currentY + 59, paint);
+        canvas.drawText("Company Reg No: PV 00226883", leftX, currentY + 76, paint);
+        canvas.drawText("TELEPHONE NO: 0702353535", leftX, currentY + 93, paint);
+
+        // Email
+        canvas.drawText("E-MAIL: thalgampalathunapaha20@gmail.com", 280, currentY + 93, paint);
+
+        // Thick separator line
+        currentY += 115;
+        paint.setStrokeWidth(3f);
+        canvas.drawLine(leftX, currentY, rightX, currentY, paint);
+        paint.setStrokeWidth(1f); // Reset
+
+        currentY += 40;
+
+        // Document Title
+        paint.setTextSize(18);
         paint.setFakeBoldText(true);
         paint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("Stock Sheet", 595 / 2f, y, paint);
-        y += 30;
+        canvas.drawText("STOCK INVENTORY REPORT", 595 / 2f, currentY, paint);
+        currentY += 25;
 
-        paint.setTextAlign(Paint.Align.LEFT); // Reset to left align for other details
-        if (branchName != null && !branchName.isEmpty()) {
-            paint.setTextSize(16);
-            paint.setFakeBoldText(true);
-            canvas.drawText("Branch: " + branchName, x, y, paint);
-            y += 20;
-        }
-
+        // Branch and Date info
+        paint.setTextAlign(Paint.Align.LEFT);
         paint.setTextSize(12);
         paint.setFakeBoldText(false);
+        if (branchName != null && !branchName.isEmpty()) {
+            canvas.drawText("Branch: " + branchName, leftX, currentY, paint);
+            currentY += 15;
+        }
+
         String currentDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-        canvas.drawText("Generated on: " + currentDateTime, x, y, paint);
-        y += 30;
+        canvas.drawText("Generated on: " + currentDateTime, leftX, currentY, paint);
+
+        int x = leftX;
+        int y = currentY + 30;
 
         // Table Header
         paint.setFakeBoldText(true);
+        paint.setTextAlign(Paint.Align.LEFT);
         canvas.drawText("ID", x, y, paint);
-        canvas.drawText("Product Name", x + 40, y, paint);
-        canvas.drawText("Qty", x + 300, y, paint);
-        canvas.drawText("Unit Price", x + 380, y, paint);
-        canvas.drawText("Total", x + 480, y, paint);
+        canvas.drawText("Product Name", x + 35, y, paint);
+        paint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText("Qty", x + 280, y, paint);
+        canvas.drawText("Unit Price", x + 390, y, paint);
+        canvas.drawText("Total", 555, y, paint);
         y += 10;
         canvas.drawLine(x, y, 555, y, paint);
         y += 20;
@@ -422,11 +459,14 @@ public class HomeActivity extends AppCompatActivity {
         for (StockItem item : stockList) {
             if (item.name.isEmpty() && item.qty == 0 && item.unitPrice == 0) continue;
 
+            paint.setTextAlign(Paint.Align.LEFT);
             canvas.drawText(String.valueOf(item.id), x, y, paint);
-            canvas.drawText(item.name, x + 40, y, paint);
-            canvas.drawText(String.valueOf(item.qty), x + 300, y, paint);
-            canvas.drawText(String.format(Locale.US, "%.2f", item.unitPrice), x + 380, y, paint);
-            canvas.drawText(String.format(Locale.US, "%.2f", item.totalPrice), x + 480, y, paint);
+            canvas.drawText(item.name, x + 35, y, paint);
+            
+            paint.setTextAlign(Paint.Align.RIGHT);
+            canvas.drawText(String.valueOf(item.qty), x + 280, y, paint);
+            canvas.drawText(String.format(Locale.US, "%.2f", item.unitPrice), x + 390, y, paint);
+            canvas.drawText(String.format(Locale.US, "%.2f", item.totalPrice), 555, y, paint);
             y += 20;
 
             if (y > 780) { // Leave space for footer
@@ -440,10 +480,12 @@ public class HomeActivity extends AppCompatActivity {
         }
 
         y += 20;
+        paint.setTextAlign(Paint.Align.LEFT);
         canvas.drawLine(x, y, 555, y, paint);
         y += 30;
         paint.setFakeBoldText(true);
-        canvas.drawText("Grand Total: " + tvGrandTotal.getText().toString(), x + 350, y, paint);
+        paint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText("Grand Total: " + tvGrandTotal.getText().toString(), 555, y, paint);
 
         // Add Note Paragraph
         y += 40;
